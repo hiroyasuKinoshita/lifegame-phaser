@@ -142,6 +142,8 @@ function update() {
     const startRow = Math.floor(camera.scrollY / GRID_SIZE);
     const endRow = Math.ceil((camera.scrollY + camera.height) / GRID_SIZE);
 
+    const detectedPatternCells = findPatterns(grid);
+
     // Draw the grid
     for (let i = startRow; i < endRow; i++) {
         for (let j = startCol; j < endCol; j++) {
@@ -149,9 +151,16 @@ function update() {
             if (i >= 0 && i < ROWS && j >= 0 && j < COLS) {
                 const cellAge = grid[i][j];
                 if (cellAge > 0) { // Cell is alive
-                    // Calculate color based on age
-                    const greenComponent = Math.max(0, 255 - (cellAge * (255 / MAX_AGE)));
-                    const color = (0x00 << 16) | (Math.floor(greenComponent) << 8) | 0x00;
+                    let color;
+                    const cellKey = `${i},${j}`;
+
+                    if (detectedPatternCells.has(cellKey)) {
+                        color = detectedPatternCells.get(cellKey); // Use pattern color
+                    } else {
+                        // Calculate color based on age
+                        const greenComponent = Math.max(0, 255 - (cellAge * (255 / MAX_AGE)));
+                        color = (0x00 << 16) | (Math.floor(greenComponent) << 8) | 0x00;
+                    }
                     graphics.fillStyle(color);
                     graphics.fillRect(j * GRID_SIZE, i * GRID_SIZE, GRID_SIZE, GRID_SIZE);
                 }
@@ -186,6 +195,71 @@ function updateGrid() {
     }
 
     grid = nextGrid;
+}
+
+// --- Pattern Recognition Functions ---
+
+const PATTERNS = {
+    block: {
+        shape: [[0, 0], [0, 1], [1, 0], [1, 1]],
+        color: 0xFF0000 // Red
+    },
+    blinker_h: {
+        shape: [[0, 0], [0, 1], [0, 2]],
+        color: 0x0000FF // Blue
+    },
+    blinker_v: {
+        shape: [[0, 0], [1, 0], [2, 0]],
+        color: 0x0000FF // Blue
+    }
+};
+
+/**
+ * Checks if a given pattern exists at a specific (row, col) in the grid.
+ * @param {Array<Array<number>>} currentGrid The current game grid.
+ * @param {number} startRow The starting row for pattern check.
+ * @param {number} startCol The starting column for pattern check.
+ * @param {Array<Array<number>>} patternShape The shape of the pattern (relative coordinates).
+ * @returns {boolean} True if the pattern exists, false otherwise.
+ */
+function checkPattern(currentGrid, startRow, startCol, patternShape) {
+    for (const [dr, dc] of patternShape) {
+        const r = startRow + dr;
+        const c = startCol + dc;
+
+        // Check bounds and if the cell is alive
+        if (r < 0 || r >= ROWS || c < 0 || c >= COLS || currentGrid[r][c] === 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/**
+ * Finds all occurrences of defined patterns in the grid.
+ * @param {Array<Array<number>>} currentGrid The current game grid.
+ * @returns {Map<string, number>} A map where keys are "row,col" strings and values are pattern colors.
+ */
+function findPatterns(currentGrid) {
+    const detectedPatternCells = new Map();
+
+    for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+            // Only check if the current cell is alive
+            if (currentGrid[r][c] > 0) {
+                for (const patternName in PATTERNS) {
+                    const pattern = PATTERNS[patternName];
+                    if (checkPattern(currentGrid, r, c, pattern.shape)) {
+                        // If pattern found, mark all its cells with the pattern's color
+                        for (const [dr, dc] of pattern.shape) {
+                            detectedPatternCells.set(`${r + dr},${c + dc}`, pattern.color);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return detectedPatternCells;
 }
 
 function countNeighbors(grid, row, col) {
