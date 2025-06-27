@@ -30,22 +30,24 @@ jobs:
       - name: Copy index.html to docs
         run: cp index.html docs/index.html
 
-      - name: Verify index.html content in workflow
-        run: cat index.html
-
-      - name: Copy compiled game.js to docs
-        run: cp dist/game.js docs/game.js
-
       - name: Copy compiled game.js to docs
         run: cp dist/game.js docs/game.js
 
       - name: Create .nojekyll file
         run: touch docs/.nojekyll
 
+      - name: Create cache busting timestamp file
+        run: echo "$(date +%s)" > docs/timestamp.txt
+
+      - name: Add cache busting to HTML
+        run: |
+          sed -i 's/game\.js/game.js?v='$(date +%s)'/g' docs/index.html
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./docs
-          enable_jekyll: true
+          enable_jekyll: false
+          force_orphan: true
           
