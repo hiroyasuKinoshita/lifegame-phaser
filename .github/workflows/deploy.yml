@@ -33,6 +33,12 @@ jobs:
       - name: Copy compiled game.js to docs
         run: cp dist/game.js docs/game.js
 
+      - name: Copy compiled game.js to docs
+        run: cp dist/game.js docs/game.js
+
+      - name: Create .nojekyll file
+        run: touch docs/.nojekyll
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
