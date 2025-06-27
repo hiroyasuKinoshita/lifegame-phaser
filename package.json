@@ -1,0 +1,28 @@
+{
+  "name": "lifegame",
+  "version": "1.0.0",
+  "description": "This is a simple implementation of Conway's Game of Life using the Phaser 3 game framework.",
+  "main": "game.js",
+  "scripts": {
+    "test": "echo "Error: no test specified" && exit 1",
+    "build": "npx tsc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hiroyasuKinoshita/lifegame-phaser.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/hiroyasuKinoshita/lifegame-phaser/issues"
+  },
+  "homepage": "https://github.com/hiroyasuKinoshita/lifegame-phaser#readme",
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "phaser": "^3.90.0"
+  }
+}

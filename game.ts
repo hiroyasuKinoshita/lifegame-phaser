@@ -1,4 +1,6 @@
-const config = {
+import "phaser";
+
+const config: Phaser.Types.Core.GameConfig = {
     type: Phaser.AUTO,
     width: 800,
     height: 600,
@@ -20,14 +22,14 @@ const ROWS = WORLD_HEIGHT / GRID_SIZE;
 const COLS = WORLD_WIDTH / GRID_SIZE;
 const MAX_AGE = 10; // セルの最大年齢（色変化の基準）
 
-let grid;
-let graphics;
+let grid: number[][];
+let graphics: Phaser.GameObjects.Graphics;
 let gameStarted = false;
-let gameUpdateEvent; // To store the time event for stopping/resetting
+let gameUpdateEvent: Phaser.Time.TimerEvent; // To store the time event for stopping/resetting
 
-function preload() {}
+function preload(this: Phaser.Scene) { }
 
-function create() {
+function create(this: Phaser.Scene) {
     graphics = this.add.graphics();
 
     // カメラのワールド境界を設定
@@ -36,7 +38,7 @@ function create() {
     let isDragging = false;
     let lastPointerPosition = new Phaser.Math.Vector2();
 
-    this.input.on('pointerdown', (pointer) => {
+    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
         isDragging = true;
         lastPointerPosition.copy(pointer.position);
     });
@@ -45,7 +47,7 @@ function create() {
         isDragging = false;
     });
 
-    this.input.on('pointermove', (pointer) => {
+    this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
         if (isDragging) {
             const dx = pointer.position.x - lastPointerPosition.x;
             const dy = pointer.position.y - lastPointerPosition.y;
@@ -60,20 +62,26 @@ function create() {
     const startButton = document.getElementById('startButton');
     const resetButton = document.getElementById('resetButton');
 
-    startButton.addEventListener('click', () => {
-        startButton.style.display = 'none'; // Hide the button
-        resetButton.style.display = 'block'; // Show reset button
-        startGame.call(this); // Call startGame in the context of the scene
-    });
+    if (startButton) {
+        startButton.addEventListener('click', () => {
+            startButton.style.display = 'none'; // Hide the button
+            if (resetButton) {
+                resetButton.style.display = 'block'; // Show reset button
+            }
+            startGame.call(this); // Call startGame in the context of the scene
+        });
+    }
 
-    resetButton.addEventListener('click', () => {
-        resetGame.call(this); // Call resetGame in the context of the scene
-    });
+    if (resetButton) {
+        resetButton.addEventListener('click', () => {
+            resetGame.call(this); // Call resetGame in the context of the scene
+        });
+        resetButton.style.display = 'none'; // Hide reset button initially
+    }
 
-    resetButton.style.display = 'none'; // Hide reset button initially
 
     // Mouse wheel zoom
-    this.input.on('wheel', (pointer, gameObjects, deltaX, deltaY, deltaZ) => {
+    this.input.on('wheel', (pointer: Phaser.Input.Pointer, gameObjects: Phaser.GameObjects.GameObject[], deltaX: number, deltaY: number, deltaZ: number) => {
         const camera = this.cameras.main;
         let newZoom = camera.zoom;
 
@@ -89,7 +97,7 @@ function create() {
     });
 }
 
-function startGame() {
+function startGame(this: Phaser.Scene) {
     // Initialize the grid with random values (0 for dead, 1 for newly born)
     grid = new Array(ROWS);
     for (let i = 0; i < ROWS; i++) {
@@ -110,26 +118,31 @@ function startGame() {
     gameStarted = true;
 }
 
-function resetGame() {
+function resetGame(this: Phaser.Scene) {
     if (gameUpdateEvent) {
         gameUpdateEvent.remove(); // Stop the game update loop
     }
     gameStarted = false;
-    grid = null; // Clear the grid
+    grid = []; // Clear the grid
     graphics.clear(); // Clear drawing
 
     const startButton = document.getElementById('startButton');
     const resetButton = document.getElementById('resetButton');
 
-    startButton.style.display = 'block'; // Show start button
-    resetButton.style.display = 'none'; // Hide reset button
+    if (startButton) {
+        startButton.style.display = 'block'; // Show start button
+    }
+    if (resetButton) {
+        resetButton.style.display = 'none'; // Hide reset button
+    }
+
 
     // Reset camera position
     this.cameras.main.scrollX = 0;
     this.cameras.main.scrollY = 0;
 }
 
-function update() {
+function update(this: Phaser.Scene) {
     if (!gameStarted) {
         return;
     }
@@ -161,7 +174,7 @@ function update() {
                         const greenComponent = Math.max(0, 255 - (cellAge * (255 / MAX_AGE)));
                         color = (0x00 << 16) | (Math.floor(greenComponent) << 8) | 0x00;
                     }
-                    graphics.fillStyle(color);
+                    graphics.fillStyle(color as number);
                     graphics.fillRect(j * GRID_SIZE, i * GRID_SIZE, GRID_SIZE, GRID_SIZE);
                 }
             }
@@ -199,7 +212,7 @@ function updateGrid() {
 
 // --- Pattern Recognition Functions ---
 
-const PATTERNS = {
+const PATTERNS: { [key: string]: { shape: number[][]; color: number } } = {
     block: {
         shape: [[0, 0], [0, 1], [1, 0], [1, 1]],
         color: 0xFF0000 // Red
@@ -222,7 +235,7 @@ const PATTERNS = {
  * @param {Array<Array<number>>} patternShape The shape of the pattern (relative coordinates).
  * @returns {boolean} True if the pattern exists, false otherwise.
  */
-function checkPattern(currentGrid, startRow, startCol, patternShape) {
+function checkPattern(currentGrid: number[][], startRow: number, startCol: number, patternShape: number[][]) {
     for (const [dr, dc] of patternShape) {
         const r = startRow + dr;
         const c = startCol + dc;
@@ -240,8 +253,8 @@ function checkPattern(currentGrid, startRow, startCol, patternShape) {
  * @param {Array<Array<number>>} currentGrid The current game grid.
  * @returns {Map<string, number>} A map where keys are "row,col" strings and values are pattern colors.
  */
-function findPatterns(currentGrid) {
-    const detectedPatternCells = new Map();
+function findPatterns(currentGrid: number[][]) {
+    const detectedPatternCells = new Map<string, number>();
 
     for (let r = 0; r < ROWS; r++) {
         for (let c = 0; c < COLS; c++) {
@@ -262,7 +275,7 @@ function findPatterns(currentGrid) {
     return detectedPatternCells;
 }
 
-function countNeighbors(grid, row, col) {
+function countNeighbors(grid: number[][], row: number, col: number) {
     let count = 0;
     for (let i = -1; i <= 1; i++) {
         for (let j = -1; j <= 1; j++) {
