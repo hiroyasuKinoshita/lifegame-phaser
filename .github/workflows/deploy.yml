@@ -24,16 +24,19 @@ jobs:
       - name: Build project
         run: npm run build
 
-      - name: Create dist directory
-        run: mkdir -p dist
+      - name: Create docs directory
+        run: mkdir -p docs
 
-      - name: Copy index.html to dist
-        run: cp index.html dist/index.html
+      - name: Copy index.html to docs
+        run: cp index.html docs/index.html
+
+      - name: Copy compiled game.js to docs
+        run: cp dist/game.js docs/game.js
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist
+          publish_dir: ./docs
           enable_jekyll: true
           
