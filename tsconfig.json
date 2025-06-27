@@ -1,7 +1,9 @@
 {
   "compilerOptions": {
     "target": "es2016",
-    "module": "es2015",
+    "module": "commonjs",
+    "lib": ["dom", "es2015"],
+    "types": ["phaser"],
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
