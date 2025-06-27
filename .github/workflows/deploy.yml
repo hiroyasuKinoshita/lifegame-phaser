@@ -30,6 +30,9 @@ jobs:
       - name: Copy index.html to docs
         run: cp index.html docs/index.html
 
+      - name: Verify index.html content in workflow
+        run: cat index.html
+
       - name: Copy compiled game.js to docs
         run: cp dist/game.js docs/game.js
 
