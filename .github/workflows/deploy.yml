@@ -50,4 +50,7 @@ jobs:
           publish_dir: ./docs
           enable_jekyll: false
           force_orphan: true
+          cname: ''
+          disable_nojekyll: false
+          jekyll: false
           
