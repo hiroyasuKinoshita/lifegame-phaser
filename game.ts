@@ -48,6 +48,14 @@ let playerCards: Card[] = [];
 let evolvedCells = new Set<string>();
 let barrierCells = new Map<string, number>();
 let cardsContainer: HTMLElement | null;
+let popupContainer: HTMLElement | null;
+
+const CARD_DESCRIPTIONS: Record<CardType, string> = {
+    [CardType.Disaster]: 'ランダムなセルを消滅させます。',
+    [CardType.Evolution]: 'いくつかのセルが進化し移動できるようになります。',
+    [CardType.Split]: 'セルを中心に周囲へ増殖させます。',
+    [CardType.Barrier]: '一時的に周囲を守るバリアを張ります。'
+};
 
 function preload(this: any) { }
 
@@ -90,6 +98,10 @@ function create(this: any) {
     infoContainer = document.getElementById('infoContainer');
     if (infoContainer) {
         infoContainer.textContent = '';
+    }
+    popupContainer = document.getElementById('popup');
+    if (popupContainer) {
+        popupContainer.style.display = 'none';
     }
 
     if (startButton) {
@@ -426,9 +438,32 @@ function displayCards() {
         btn.textContent = card.type;
         btn.style.marginRight = '4px';
         btn.addEventListener('click', () => {
-            useCard(index);
+            showCardPopup(index);
         });
         cardsContainer!.appendChild(btn);
+    });
+}
+
+function showCardPopup(index: number) {
+    if (!popupContainer) return;
+    const card = playerCards[index];
+    if (!card) return;
+    popupContainer.innerHTML = `<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#333;padding:20px;border-radius:5px;">
+        <p>${CARD_DESCRIPTIONS[card.type]}</p>
+        <button id="popupUse">Use</button>
+        <button id="popupClose">Close</button>
+    </div>`;
+    popupContainer.style.display = 'block';
+    const close = () => {
+        if (popupContainer) {
+            popupContainer.style.display = 'none';
+            popupContainer.innerHTML = '';
+        }
+    };
+    document.getElementById('popupClose')?.addEventListener('click', close);
+    document.getElementById('popupUse')?.addEventListener('click', () => {
+        useCard(index);
+        close();
     });
 }
 

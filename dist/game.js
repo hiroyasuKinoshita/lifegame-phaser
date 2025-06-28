@@ -43,6 +43,13 @@ let playerCards = [];
 let evolvedCells = new Set();
 let barrierCells = new Map();
 let cardsContainer;
+let popupContainer;
+const CARD_DESCRIPTIONS = {
+    [CardType.Disaster]: 'ランダムなセルを消滅させます。',
+    [CardType.Evolution]: 'いくつかのセルが進化し移動できるようになります。',
+    [CardType.Split]: 'セルを中心に周囲へ増殖させます。',
+    [CardType.Barrier]: '一時的に周囲を守るバリアを張ります。'
+};
 function preload() { }
 function create() {
     graphics = this.add.graphics();
@@ -75,6 +82,10 @@ function create() {
     infoContainer = document.getElementById('infoContainer');
     if (infoContainer) {
         infoContainer.textContent = '';
+    }
+    popupContainer = document.getElementById('popup');
+    if (popupContainer) {
+        popupContainer.style.display = 'none';
     }
     if (startButton) {
         startButton.addEventListener('click', () => {
@@ -385,9 +396,34 @@ function displayCards() {
         btn.textContent = card.type;
         btn.style.marginRight = '4px';
         btn.addEventListener('click', () => {
-            useCard(index);
+            showCardPopup(index);
         });
         cardsContainer.appendChild(btn);
+    });
+}
+function showCardPopup(index) {
+    var _a, _b;
+    if (!popupContainer)
+        return;
+    const card = playerCards[index];
+    if (!card)
+        return;
+    popupContainer.innerHTML = `<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#333;padding:20px;border-radius:5px;">
+        <p>${CARD_DESCRIPTIONS[card.type]}</p>
+        <button id="popupUse">Use</button>
+        <button id="popupClose">Close</button>
+    </div>`;
+    popupContainer.style.display = 'block';
+    const close = () => {
+        if (popupContainer) {
+            popupContainer.style.display = 'none';
+            popupContainer.innerHTML = '';
+        }
+    };
+    (_a = document.getElementById('popupClose')) === null || _a === void 0 ? void 0 : _a.addEventListener('click', close);
+    (_b = document.getElementById('popupUse')) === null || _b === void 0 ? void 0 : _b.addEventListener('click', () => {
+        useCard(index);
+        close();
     });
 }
 function useCard(index) {
