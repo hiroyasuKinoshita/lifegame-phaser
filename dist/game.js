@@ -1,10 +1,11 @@
-"use strict";
+var _a, _b;
 // Phaser is loaded globally from CDN
 const config = {
     type: Phaser.AUTO,
-    width: 800,
-    height: 600,
-    parent: 'phaser-example',
+    width: window.innerWidth,
+    height: window.innerHeight,
+    parent: 'game-container',
+    scale: { mode: (_b = (_a = Phaser.Scale) === null || _a === void 0 ? void 0 : _a.RESIZE) !== null && _b !== void 0 ? _b : 0 },
     scene: {
         preload: preload,
         create: create,
@@ -12,6 +13,10 @@ const config = {
     }
 };
 const game = new Phaser.Game(config);
+window.addEventListener('resize', () => {
+    var _a;
+    (_a = game.scale) === null || _a === void 0 ? void 0 : _a.resize(window.innerWidth, window.innerHeight);
+});
 const GRID_SIZE = 10;
 const WORLD_WIDTH = 3200; // 仮想世界の幅 (例: 800 * 4)
 const WORLD_HEIGHT = 2400; // 仮想世界の高さ (例: 600 * 4)
@@ -22,6 +27,22 @@ let grid;
 let graphics;
 let gameStarted = false;
 let gameUpdateEvent; // To store the time event for stopping/resetting
+let cardDealEvent;
+let generationCount = 0;
+let gameStartTime = 0;
+let infoContainer;
+const MAX_CARDS = 8;
+var CardType;
+(function (CardType) {
+    CardType["Disaster"] = "Disaster";
+    CardType["Evolution"] = "Evolution";
+    CardType["Split"] = "Split";
+    CardType["Barrier"] = "Barrier";
+})(CardType || (CardType = {}));
+let playerCards = [];
+let evolvedCells = new Set();
+let barrierCells = new Map();
+let cardsContainer;
 function preload() { }
 function create() {
     graphics = this.add.graphics();
@@ -47,6 +68,14 @@ function create() {
     });
     const startButton = document.getElementById('startButton');
     const resetButton = document.getElementById('resetButton');
+    cardsContainer = document.getElementById('cardsContainer');
+    if (cardsContainer) {
+        cardsContainer.innerHTML = '';
+    }
+    infoContainer = document.getElementById('infoContainer');
+    if (infoContainer) {
+        infoContainer.textContent = '';
+    }
     if (startButton) {
         startButton.addEventListener('click', () => {
             startButton.style.display = 'none'; // Hide the button
@@ -86,6 +115,26 @@ function startGame() {
             grid[i][j] = Math.round(Math.random());
         }
     }
+    evolvedCells.clear();
+    barrierCells.clear();
+    playerCards = generateCards(3);
+    displayCards();
+    generationCount = 0;
+    gameStartTime = Date.now();
+    if (infoContainer) {
+        infoContainer.textContent = 'Time: 0s Gen: 0';
+    }
+    if (cardDealEvent) {
+        cardDealEvent.remove();
+    }
+    cardDealEvent = this.time.addEvent({
+        delay: 10000,
+        callback: () => {
+            addRandomCard();
+        },
+        callbackScope: this,
+        loop: true
+    });
     // Update the grid every 100ms
     gameUpdateEvent = this.time.addEvent({
         delay: 100,
@@ -99,6 +148,9 @@ function resetGame() {
     if (gameUpdateEvent) {
         gameUpdateEvent.remove(); // Stop the game update loop
     }
+    if (cardDealEvent) {
+        cardDealEvent.remove();
+    }
     gameStarted = false;
     grid = []; // Clear the grid
     graphics.clear(); // Clear drawing
@@ -109,6 +161,15 @@ function resetGame() {
     }
     if (resetButton) {
         resetButton.style.display = 'none'; // Hide reset button
+    }
+    playerCards = [];
+    evolvedCells.clear();
+    barrierCells.clear();
+    if (cardsContainer) {
+        cardsContainer.innerHTML = '';
+    }
+    if (infoContainer) {
+        infoContainer.textContent = '';
     }
     // Reset camera position
     this.cameras.main.scrollX = 0;
@@ -134,11 +195,16 @@ function update() {
                 if (cellAge > 0) { // Cell is alive
                     let color;
                     const cellKey = `${i},${j}`;
-                    if (detectedPatternCells.has(cellKey)) {
-                        color = detectedPatternCells.get(cellKey); // Use pattern color
+                    if (barrierCells.has(cellKey)) {
+                        color = 0xffff00; // yellow for barrier
+                    }
+                    else if (evolvedCells.has(cellKey)) {
+                        color = 0x00ffff; // cyan for evolved
+                    }
+                    else if (detectedPatternCells.has(cellKey)) {
+                        color = detectedPatternCells.get(cellKey);
                     }
                     else {
-                        // Calculate color based on age
                         const greenComponent = Math.max(0, 255 - (cellAge * (255 / MAX_AGE)));
                         color = (0x00 << 16) | (Math.floor(greenComponent) << 8) | 0x00;
                     }
@@ -175,7 +241,53 @@ function updateGrid() {
             }
         }
     }
+    // Apply barrier protection and countdown
+    barrierCells.forEach((turns, key) => {
+        const [r, c] = key.split(',').map(Number);
+        if (r >= 0 && r < ROWS && c >= 0 && c < COLS) {
+            nextGrid[r][c] = Math.max(nextGrid[r][c], 1);
+        }
+        turns--;
+        if (turns <= 0) {
+            barrierCells.delete(key);
+        }
+        else {
+            barrierCells.set(key, turns);
+        }
+    });
+    // Handle evolved cell movement
+    const newEvolved = new Set();
+    evolvedCells.forEach(key => {
+        const [r, c] = key.split(',').map(Number);
+        if (r < 0 || r >= ROWS || c < 0 || c >= COLS)
+            return;
+        if (nextGrid[r][c] <= 0)
+            return; // cell died
+        const dirs = [
+            [-1, -1], [-1, 0], [-1, 1],
+            [0, -1], [0, 1],
+            [1, -1], [1, 0], [1, 1]
+        ];
+        Phaser.Math.Shuffle(dirs);
+        for (const [dr, dc] of dirs) {
+            const nr = r + dr;
+            const nc = c + dc;
+            if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && nextGrid[nr][nc] === 0) {
+                nextGrid[nr][nc] = nextGrid[r][c];
+                nextGrid[r][c] = 0;
+                newEvolved.add(`${nr},${nc}`);
+                return;
+            }
+        }
+        newEvolved.add(key);
+    });
+    evolvedCells = newEvolved;
     grid = nextGrid;
+    generationCount++;
+    if (infoContainer) {
+        const elapsed = Math.floor((Date.now() - gameStartTime) / 1000);
+        infoContainer.textContent = `Time: ${elapsed}s Gen: ${generationCount}`;
+    }
 }
 // --- Pattern Recognition Functions ---
 const PATTERNS = {
@@ -254,4 +366,110 @@ function countNeighbors(grid, row, col) {
         }
     }
     return count;
+}
+function generateCards(num) {
+    const types = Object.keys(CardType).map(k => CardType[k]);
+    const cards = [];
+    for (let i = 0; i < num; i++) {
+        const type = types[Phaser.Math.Between(0, types.length - 1)];
+        cards.push({ type });
+    }
+    return cards;
+}
+function displayCards() {
+    if (!cardsContainer)
+        return;
+    cardsContainer.innerHTML = '';
+    playerCards.forEach((card, index) => {
+        const btn = document.createElement('button');
+        btn.textContent = card.type;
+        btn.style.marginRight = '4px';
+        btn.addEventListener('click', () => {
+            useCard(index);
+        });
+        cardsContainer.appendChild(btn);
+    });
+}
+function useCard(index) {
+    const card = playerCards[index];
+    if (!card)
+        return;
+    switch (card.type) {
+        case CardType.Disaster:
+            applyDisaster();
+            break;
+        case CardType.Evolution:
+            applyEvolution();
+            break;
+        case CardType.Split:
+            applySplit();
+            break;
+        case CardType.Barrier:
+            applyBarrier();
+            break;
+    }
+    playerCards.splice(index, 1);
+    displayCards();
+}
+function applyDisaster() {
+    const cellsToKill = 100;
+    for (let i = 0; i < cellsToKill; i++) {
+        const r = Phaser.Math.Between(0, ROWS - 1);
+        const c = Phaser.Math.Between(0, COLS - 1);
+        grid[r][c] = 0;
+        evolvedCells.delete(`${r},${c}`);
+        barrierCells.delete(`${r},${c}`);
+    }
+}
+function applyEvolution() {
+    let added = 0;
+    let attempts = 0;
+    while (added < 5 && attempts < 100) {
+        const r = Phaser.Math.Between(0, ROWS - 1);
+        const c = Phaser.Math.Between(0, COLS - 1);
+        if (grid[r][c] > 0) {
+            evolvedCells.add(`${r},${c}`);
+            added++;
+        }
+        attempts++;
+    }
+}
+function applySplit() {
+    let done = 0;
+    let attempts = 0;
+    while (done < 5 && attempts < 100) {
+        const r = Phaser.Math.Between(0, ROWS - 1);
+        const c = Phaser.Math.Between(0, COLS - 1);
+        if (grid[r][c] > 0) {
+            for (let dr = -1; dr <= 1; dr++) {
+                for (let dc = -1; dc <= 1; dc++) {
+                    const nr = r + dr;
+                    const nc = c + dc;
+                    if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) {
+                        grid[nr][nc] = 1;
+                    }
+                }
+            }
+            done++;
+        }
+        attempts++;
+    }
+}
+function applyBarrier() {
+    const r = Phaser.Math.Between(0, ROWS - 6);
+    const c = Phaser.Math.Between(0, COLS - 6);
+    for (let i = 0; i < 5; i++) {
+        for (let j = 0; j < 5; j++) {
+            const key = `${r + i},${c + j}`;
+            barrierCells.set(key, 20);
+        }
+    }
+}
+function addRandomCard() {
+    const [card] = generateCards(1);
+    playerCards.push(card);
+    while (playerCards.length > MAX_CARDS) {
+        playerCards.shift();
+    }
+    displayCards();
 }
