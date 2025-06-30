@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Life Game</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            touch-action: none;
+            -ms-touch-action: none;
+        }
+        #game-container {
+            width: 100vw;
+            height: 100vh;
+        }
+        .card-button {
+            background-color: #4a4a4a; /* Dark gray background */
+            border: 3px solid #1a1a1a; /* Dark border */
+            color: white;
+            padding: 8px 12px;
+            font-family: 'Courier New', Courier, monospace; /* Monospaced font for retro feel */
+            font-size: 14px;
+            text-transform: uppercase;
+            cursor: pointer;
+            margin: 0 4px 4px 0; /* Consistent margin */
+            box-shadow: 3px 3px 0px #1a1a1a; /* Pixelated shadow */
+            position: relative; /* For press-down effect */
+            transition: all 0.05s linear;
+        }
+        .card-button:active {
+            top: 3px;
+            left: 3px;
+            box-shadow: 0px 0px 0px #1a1a1a; /* Remove shadow on click */
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js"></script>
+</head>
+<body>
+    <button id="startButton" style="position: absolute; top: 10px; left: 10px; z-index: 100;">Start Game</button>
+    <button id="resetButton" style="position: absolute; top: 10px; left: 120px; z-index: 100;">Reset Game</button>
+    <div id="cardsContainer" style="position: absolute; top: 50px; left: 10px; z-index: 100;"></div>
+    <div id="infoContainer" style="position: absolute; top: 10px; right: 10px; z-index: 100; color: white;"></div>
+    <div id="game-container"></div>
+    <div id="popup" style="display:none; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); z-index:200; color:white; text-align:center;"></div>
+    <script src="dist/game.js?v=1751295384"></script>
+</body>
+</html>
