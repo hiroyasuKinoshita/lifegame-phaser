@@ -268,29 +268,45 @@ function updateGrid() {
     });
     // Handle evolved cell movement
     const newEvolved = new Set();
+    const moves = [];
+    const occupiedTargets = new Set();
     evolvedCells.forEach(key => {
         const [r, c] = key.split(',').map(Number);
-        if (r < 0 || r >= ROWS || c < 0 || c >= COLS)
-            return;
-        if (nextGrid[r][c] <= 0)
-            return; // cell died
+        if (Number.isNaN(r) || Number.isNaN(c) || r < 0 || r >= ROWS || c < 0 || c >= COLS) {
+            return; // Skip invalid keys
+        }
+        if (nextGrid[r][c] <= 0) {
+            return; // Cell died, no longer evolved
+        }
         const dirs = [
             [-1, -1], [-1, 0], [-1, 1],
             [0, -1], [0, 1],
             [1, -1], [1, 0], [1, 1]
         ];
-        Phaser.Math.Shuffle(dirs);
+        Phaser.Utils.Array.Shuffle(dirs);
+        let moved = false;
         for (const [dr, dc] of dirs) {
             const nr = r + dr;
             const nc = c + dc;
-            if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && nextGrid[nr][nc] === 0) {
-                nextGrid[nr][nc] = nextGrid[r][c];
-                nextGrid[r][c] = 0;
-                newEvolved.add(`${nr},${nc}`);
-                return;
+            const targetKey = `${nr},${nc}`;
+            // Check if the target spot is valid, empty in the nextGrid, and not already claimed by another moving cell
+            if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && nextGrid[nr][nc] === 0 && !occupiedTargets.has(targetKey)) {
+                moves.push({ from: { r, c }, to: { r: nr, c: nc }, age: nextGrid[r][c] });
+                occupiedTargets.add(targetKey); // Mark target as occupied for this turn
+                moved = true;
+                break; // Cell has found its move for this turn
             }
         }
-        newEvolved.add(key);
+        if (!moved) {
+            // If the cell couldn't move, it stays in its current position
+            newEvolved.add(key);
+        }
+    });
+    // Now, execute all the planned moves
+    moves.forEach(move => {
+        nextGrid[move.to.r][move.to.c] = move.age;
+        nextGrid[move.from.r][move.from.c] = 0;
+        newEvolved.add(`${move.to.r},${move.to.c}`); // Add the new position to the evolved set for the next generation
     });
     evolvedCells = newEvolved;
     grid = nextGrid;
@@ -402,29 +418,37 @@ function displayCards() {
     });
 }
 function showCardPopup(index) {
-    var _a, _b;
     if (!popupContainer)
         return;
     const card = playerCards[index];
     if (!card)
         return;
-    popupContainer.innerHTML = `<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#333;padding:20px;border-radius:5px;">
-        <p>${CARD_DESCRIPTIONS[card.type]}</p>
-        <button id="popupUse">Use</button>
-        <button id="popupClose">Close</button>
-    </div>`;
-    popupContainer.style.display = 'block';
+    // Clear previous popup content and listeners
+    popupContainer.innerHTML = '';
+    const popupContent = document.createElement('div');
+    popupContent.style.cssText = "position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#333;padding:20px;border-radius:5px;";
+    const description = document.createElement('p');
+    description.textContent = CARD_DESCRIPTIONS[card.type];
+    popupContent.appendChild(description);
+    const useButton = document.createElement('button');
+    useButton.textContent = 'Use';
+    popupContent.appendChild(useButton);
+    const closeButton = document.createElement('button');
+    closeButton.textContent = 'Close';
+    popupContent.appendChild(closeButton);
     const close = () => {
         if (popupContainer) {
             popupContainer.style.display = 'none';
             popupContainer.innerHTML = '';
         }
     };
-    (_a = document.getElementById('popupClose')) === null || _a === void 0 ? void 0 : _a.addEventListener('click', close);
-    (_b = document.getElementById('popupUse')) === null || _b === void 0 ? void 0 : _b.addEventListener('click', () => {
+    closeButton.addEventListener('click', close);
+    useButton.addEventListener('click', () => {
         useCard(index);
         close();
     });
+    popupContainer.appendChild(popupContent);
+    popupContainer.style.display = 'block';
 }
 function useCard(index) {
     const card = playerCards[index];

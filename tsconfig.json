@@ -11,5 +11,9 @@
     "outDir": "./dist",
     "allowJs": true,
     "rootDir": "./"
-  }
+  },
+  "include": [
+    "game.ts",
+    "phaser-shim.d.ts"
+  ]
 }
