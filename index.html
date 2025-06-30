@@ -19,6 +19,25 @@
             width: 100vw;
             height: 100vh;
         }
+        .card-button {
+            background-color: #4a4a4a; /* Dark gray background */
+            border: 3px solid #1a1a1a; /* Dark border */
+            color: white;
+            padding: 8px 12px;
+            font-family: 'Courier New', Courier, monospace; /* Monospaced font for retro feel */
+            font-size: 14px;
+            text-transform: uppercase;
+            cursor: pointer;
+            margin: 0 4px 4px 0; /* Consistent margin */
+            box-shadow: 3px 3px 0px #1a1a1a; /* Pixelated shadow */
+            position: relative; /* For press-down effect */
+            transition: all 0.05s linear;
+        }
+        .card-button:active {
+            top: 3px;
+            left: 3px;
+            box-shadow: 0px 0px 0px #1a1a1a; /* Remove shadow on click */
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js"></script>
 </head>

@@ -25,6 +25,7 @@ const COLS = WORLD_WIDTH / GRID_SIZE;
 const MAX_AGE = 10; // セルの最大年齢（色変化の基準）
 let grid;
 let graphics;
+let scene; // To hold the scene context
 let gameStarted = false;
 let gameUpdateEvent; // To store the time event for stopping/resetting
 let cardDealEvent;
@@ -52,6 +53,7 @@ const CARD_DESCRIPTIONS = {
 };
 function preload() { }
 function create() {
+    scene = this; // Save the scene context
     graphics = this.add.graphics();
     // カメラのワールド境界を設定
     this.cameras.main.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
@@ -410,7 +412,7 @@ function displayCards() {
     playerCards.forEach((card, index) => {
         const btn = document.createElement('button');
         btn.textContent = card.type;
-        btn.style.marginRight = '4px';
+        btn.className = 'card-button'; // Apply the new CSS class
         btn.addEventListener('click', () => {
             showCardPopup(index);
         });
@@ -454,6 +456,7 @@ function useCard(index) {
     const card = playerCards[index];
     if (!card)
         return;
+    playCardEffect(card.type); // Play the visual effect
     switch (card.type) {
         case CardType.Disaster:
             applyDisaster();
@@ -470,6 +473,32 @@ function useCard(index) {
     }
     playerCards.splice(index, 1);
     displayCards();
+}
+function playCardEffect(cardType) {
+    if (!scene)
+        return;
+    const camera = scene.cameras.main;
+    const effect = new Phaser.GameObjects.Rectangle(scene, camera.scrollX + camera.width / 2, camera.scrollY + camera.height / 2, camera.width, camera.height);
+    effect.setStrokeStyle(4, getEffectColor(cardType));
+    effect.setAlpha(0.5);
+    scene.add.existing(effect);
+    scene.tweens.add({
+        targets: effect,
+        alpha: 0,
+        duration: 500, // 0.5 seconds
+        onComplete: () => {
+            effect.destroy();
+        }
+    });
+}
+function getEffectColor(cardType) {
+    switch (cardType) {
+        case CardType.Disaster: return 0xff0000; // Red
+        case CardType.Evolution: return 0x00ffff; // Cyan
+        case CardType.Split: return 0x00ff00; // Green
+        case CardType.Barrier: return 0xffff00; // Yellow
+        default: return 0xffffff; // White
+    }
 }
 function applyDisaster() {
     const cellsToKill = 100;
