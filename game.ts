@@ -130,6 +130,20 @@ function create(this: any) {
         resetButton.style.display = 'none'; // Hide reset button initially
     }
 
+    const addSpaceshipButton = document.getElementById('addSpaceshipButton');
+    if (addSpaceshipButton) {
+        addSpaceshipButton.addEventListener('click', () => {
+            if (!gameStarted) return; // Don't add if the game hasn't started
+
+            const camera = this.cameras.main;
+            // Calculate the center of the camera's view in grid coordinates
+            const centerRow = Math.floor((camera.scrollY + camera.height / 2) / GRID_SIZE);
+            const centerCol = Math.floor((camera.scrollX + camera.width / 2) / GRID_SIZE);
+
+            placePattern(grid, SPACESHIP_LWSS, centerRow, centerCol);
+        });
+    }
+
 
     // Mouse wheel zoom
     this.input.on('wheel', (pointer: any, gameObjects: any[], deltaX: number, deltaY: number, deltaZ: number) => {
@@ -385,6 +399,13 @@ const PATTERNS: { [key: string]: { shape: number[][]; color: number } } = {
     }
 };
 
+const SPACESHIP_LWSS = [
+    [0, 1], [0, 3],
+    [1, 0],
+    [2, 0], [2, 3],
+    [3, 0], [3, 1], [3, 2]
+];
+
 /**
  * Checks if a given pattern exists at a specific (row, col) in the grid.
  * @param {Array<Array<number>>} currentGrid The current game grid.
@@ -431,6 +452,16 @@ function findPatterns(currentGrid: number[][]) {
         }
     }
     return detectedPatternCells;
+}
+
+function placePattern(grid: number[][], pattern: number[][], startRow: number, startCol: number) {
+    for (const [dr, dc] of pattern) {
+        const r = startRow + dr;
+        const c = startCol + dc;
+        if (r >= 0 && r < ROWS && c >= 0 && c < COLS) {
+            grid[r][c] = 1; // Set cell to alive (age 1)
+        }
+    }
 }
 
 function countNeighbors(grid: number[][], row: number, col: number) {
