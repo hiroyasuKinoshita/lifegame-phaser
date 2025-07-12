@@ -58,7 +58,14 @@ const CARD_DESCRIPTIONS: Record<CardType, string> = {
     [CardType.Barrier]: '一時的に周囲を守るバリアを張ります。'
 };
 
-function preload(this: any) { }
+function preload(this: any) { 
+    // Create a simple white square texture for particles
+    const particleGraphics = this.make.graphics({ x: 0, y: 0, add: false });
+    particleGraphics.fillStyle(0xffffff);
+    particleGraphics.fillRect(0, 0, 8, 8);
+    particleGraphics.generateTexture('particle', 8, 8);
+    particleGraphics.destroy();
+}
 
 function create(this: any) {
     scene = this; // Save the scene context
@@ -252,8 +259,9 @@ function update(this: any) {
                     } else if (detectedPatternCells.has(cellKey)) {
                         color = detectedPatternCells.get(cellKey);
                     } else {
-                        const greenComponent = Math.max(0, 255 - (cellAge * (255 / MAX_AGE)));
-                        color = (0x00 << 16) | (Math.floor(greenComponent) << 8) | 0x00;
+                        const hue = (cellAge / MAX_AGE);
+                        const rgbColor = Phaser.Display.Color.HSVToRGB(hue, 1, 1);
+                        color = Phaser.Display.Color.GetColor(rgbColor.r, rgbColor.g, rgbColor.b);
                     }
                     graphics.fillStyle(color as number);
                     graphics.fillRect(j * GRID_SIZE, i * GRID_SIZE, GRID_SIZE, GRID_SIZE);
@@ -539,24 +547,27 @@ function playCardEffect(cardType: CardType) {
     if (!scene) return;
 
     const camera = scene.cameras.main;
-    const effect = new Phaser.GameObjects.Rectangle(
-        scene,
-        camera.scrollX + camera.width / 2,
-        camera.scrollY + camera.height / 2,
-        camera.width,
-        camera.height
-    );
-    effect.setStrokeStyle(4, getEffectColor(cardType));
-    effect.setAlpha(0.5);
-    scene.add.existing(effect);
+    const centerX = camera.scrollX + camera.width / 2;
+    const centerY = camera.scrollY + camera.height / 2;
+    const color = getEffectColor(cardType);
 
-    scene.tweens.add({
-        targets: effect,
-        alpha: 0,
-        duration: 500, // 0.5 seconds
-        onComplete: () => {
-            effect.destroy();
-        }
+    const emitter = scene.add.particles(centerX, centerY, 'particle', {
+        speed: { min: 100, max: 500 },
+        angle: { min: 0, max: 360 },
+        scale: { start: 1, end: 0 },
+        blendMode: 'ADD',
+        lifespan: 1000,
+        tint: color,
+        quantity: 50,
+        active: true
+    });
+
+    // Stop the emitter after a short burst and destroy the particle manager
+    scene.time.delayedCall(200, () => {
+        emitter.stop();
+        scene.time.delayedCall(1000, () => {
+            emitter.destroy();
+        });
     });
 }
 
