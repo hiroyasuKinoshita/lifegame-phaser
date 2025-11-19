@@ -2,7 +2,10 @@
   "compilerOptions": {
     "target": "es2016",
     "module": "commonjs",
-    "lib": ["dom", "es2015"],
+    "lib": [
+      "dom",
+      "es2015"
+    ],
     "types": [],
     "strict": false,
     "esModuleInterop": true,
@@ -13,7 +16,6 @@
     "rootDir": "./"
   },
   "include": [
-    "game.ts",
-    "phaser-shim.d.ts"
+    "src/**/*"
   ]
 }
