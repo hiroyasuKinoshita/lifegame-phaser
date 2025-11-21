@@ -88,14 +88,61 @@ class World {
         // Process chunks
         for (const key of chunksToProcess) {
             const [cx, cy] = key.split(',').map(Number);
+            // Pre-fetch 3x3 neighbor chunks
+            const neighborChunks = [
+                [undefined, undefined, undefined],
+                [undefined, undefined, undefined],
+                [undefined, undefined, undefined]
+            ];
+            for (let dy = -1; dy <= 1; dy++) {
+                for (let dx = -1; dx <= 1; dx++) {
+                    neighborChunks[dy + 1][dx + 1] = this.chunks.get(this.getChunkKey(cx + dx, cy + dy));
+                }
+            }
             const chunk = new Array(constants_1.CHUNK_SIZE).fill(0).map(() => new Array(constants_1.CHUNK_SIZE).fill(0));
             let chunkHasLife = false;
             for (let y = 0; y < constants_1.CHUNK_SIZE; y++) {
                 for (let x = 0; x < constants_1.CHUNK_SIZE; x++) {
-                    const globalX = cx * constants_1.CHUNK_SIZE + x;
-                    const globalY = cy * constants_1.CHUNK_SIZE + y;
-                    const neighbors = this.countNeighbors(globalX, globalY);
-                    const currentAge = this.getCell(globalX, globalY);
+                    // Optimized neighbor counting
+                    let neighbors = 0;
+                    // Check 8 neighbors
+                    for (let dy = -1; dy <= 1; dy++) {
+                        for (let dx = -1; dx <= 1; dx++) {
+                            if (dx === 0 && dy === 0)
+                                continue;
+                            const nx = x + dx;
+                            const ny = y + dy;
+                            let targetChunk;
+                            let targetX = nx;
+                            let targetY = ny;
+                            // Determine which chunk to look at
+                            let chunkDx = 0;
+                            let chunkDy = 0;
+                            if (nx < 0) {
+                                chunkDx = -1;
+                                targetX = constants_1.CHUNK_SIZE - 1;
+                            }
+                            else if (nx >= constants_1.CHUNK_SIZE) {
+                                chunkDx = 1;
+                                targetX = 0;
+                            }
+                            if (ny < 0) {
+                                chunkDy = -1;
+                                targetY = constants_1.CHUNK_SIZE - 1;
+                            }
+                            else if (ny >= constants_1.CHUNK_SIZE) {
+                                chunkDy = 1;
+                                targetY = 0;
+                            }
+                            targetChunk = neighborChunks[chunkDy + 1][chunkDx + 1];
+                            if (targetChunk && targetChunk[targetY][targetX] > 0) {
+                                neighbors++;
+                            }
+                        }
+                    }
+                    // Get current cell age (center chunk is at [1][1])
+                    const currentChunk = neighborChunks[1][1];
+                    const currentAge = currentChunk ? currentChunk[y][x] : 0;
                     let nextAge = 0;
                     if (currentAge > 0) {
                         if (neighbors < 2 || neighbors > 3) {
@@ -144,19 +191,6 @@ class World {
         });
         this.chunks = nextChunks;
         this.generationCount++;
-    }
-    countNeighbors(x, y) {
-        let count = 0;
-        for (let dy = -1; dy <= 1; dy++) {
-            for (let dx = -1; dx <= 1; dx++) {
-                if (dx === 0 && dy === 0)
-                    continue;
-                if (this.getCell(x + dx, y + dy) > 0) {
-                    count++;
-                }
-            }
-        }
-        return count;
     }
 }
 exports.World = World;

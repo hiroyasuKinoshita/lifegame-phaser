@@ -5,8 +5,8 @@
   "main": "game.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "npx tsc",
-    "build:watch": "npx tsc --watch",
+    "build": "npx esbuild src/main.ts --bundle --outfile=dist/game.js",
+    "watch": "npx esbuild src/main.ts --bundle --outfile=dist/game.js --watch",
     "dev": "npx tsc --watch"
   },
   "repository": {
@@ -25,6 +25,7 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
-    "phaser": "^3.90.0"
+    "@types/three": "^0.181.0",
+    "three": "^0.181.2"
   }
 }

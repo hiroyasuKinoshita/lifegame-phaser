@@ -58,13 +58,10 @@ export class PatternSystem {
         return true;
     }
 
-    public findPatterns(camera: Phaser.Cameras.Scene2D.Camera): Map<string, number> {
+    public findPatterns(bounds: { startCol: number, endCol: number, startRow: number, endRow: number }): Map<string, number> {
         const detectedPatternCells = new Map<string, number>();
 
-        const startCol = Math.floor(camera.scrollX / GRID_SIZE);
-        const endCol = Math.ceil((camera.scrollX + camera.width) / GRID_SIZE);
-        const startRow = Math.floor(camera.scrollY / GRID_SIZE);
-        const endRow = Math.ceil((camera.scrollY + camera.height) / GRID_SIZE);
+        const { startCol, endCol, startRow, endRow } = bounds;
 
         for (let r = startRow; r < endRow; r++) {
             for (let c = startCol; c < endCol; c++) {

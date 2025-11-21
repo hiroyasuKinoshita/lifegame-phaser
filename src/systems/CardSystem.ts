@@ -2,6 +2,8 @@ import { Card, CardType } from '../types';
 import { MAX_CARDS, CHUNK_SIZE, GRID_SIZE } from '../constants';
 import { World } from '../core/World';
 import { PatternSystem, GLIDER_GUN } from './PatternSystem';
+import { Game } from '../core/Game';
+import { MathUtils } from '../utils/MathUtils';
 
 const CARD_DESCRIPTIONS: Record<CardType, string> = {
     [CardType.Disaster]: 'ランダムなセルを消滅させます。',
@@ -14,13 +16,13 @@ const CARD_DESCRIPTIONS: Record<CardType, string> = {
 export class CardSystem {
     private world: World;
     private patternSystem: PatternSystem;
-    private scene: Phaser.Scene;
+    private game: Game;
     private playerCards: Card[] = [];
     private cardsContainer: HTMLElement | null;
     private popupContainer: HTMLElement | null;
 
-    constructor(scene: Phaser.Scene, world: World, patternSystem: PatternSystem) {
-        this.scene = scene;
+    constructor(game: Game, world: World, patternSystem: PatternSystem) {
+        this.game = game;
         this.world = world;
         this.patternSystem = patternSystem;
         this.cardsContainer = document.getElementById('cardsContainer');
@@ -41,7 +43,7 @@ export class CardSystem {
         const types = Object.keys(CardType).map(k => (CardType as any)[k]) as CardType[];
         const cards: Card[] = [];
         for (let i = 0; i < num; i++) {
-            const type = types[Phaser.Math.Between(0, types.length - 1)];
+            const type = types[MathUtils.between(0, types.length - 1)];
             cards.push({ type });
         }
         return cards;
@@ -110,7 +112,7 @@ export class CardSystem {
         });
 
         this.popupContainer.appendChild(popupContent);
-        this.popupContainer.style.display = 'flex'; // Changed to flex for centering
+        this.popupContainer.style.display = 'flex';
     }
 
     private useCard(index: number) {
@@ -141,34 +143,31 @@ export class CardSystem {
     }
 
     private playCardEffect(cardType: CardType) {
-        const camera = this.scene.cameras.main;
-        const centerX = camera.scrollX + camera.width / 2;
-        const centerY = camera.scrollY + camera.height / 2;
+        // Simple DOM-based flash effect
+        const flash = document.createElement('div');
+        flash.style.position = 'fixed';
+        flash.style.top = '0';
+        flash.style.left = '0';
+        flash.style.width = '100%';
+        flash.style.height = '100%';
+        flash.style.pointerEvents = 'none';
+        flash.style.zIndex = '1000';
+        flash.style.transition = 'opacity 0.5s ease-out';
+        flash.style.opacity = '0.5';
+
         const color = this.getEffectColor(cardType);
+        flash.style.backgroundColor = '#' + ('000000' + color.toString(16)).slice(-6);
 
-        const particleGraphics = this.scene.make.graphics({ x: 0, y: 0, add: false } as any);
-        particleGraphics.fillStyle(0xffffff);
-        particleGraphics.fillRect(0, 0, 8, 8);
-        particleGraphics.generateTexture('particle', 8, 8);
-        particleGraphics.destroy();
+        document.body.appendChild(flash);
 
-        const emitter = this.scene.add.particles(centerX, centerY, 'particle', {
-            speed: { min: 100, max: 500 },
-            angle: { min: 0, max: 360 },
-            scale: { start: 1, end: 0 },
-            blendMode: 'ADD',
-            lifespan: 1000,
-            tint: color,
-            quantity: 50,
-            active: true
+        // Fade out and remove
+        requestAnimationFrame(() => {
+            flash.style.opacity = '0';
         });
 
-        this.scene.time.delayedCall(200, () => {
-            emitter.stop();
-            this.scene.time.delayedCall(1000, () => {
-                emitter.destroy();
-            });
-        });
+        setTimeout(() => {
+            document.body.removeChild(flash);
+        }, 500);
     }
 
     private getEffectColor(cardType: CardType): number {
@@ -188,10 +187,10 @@ export class CardSystem {
         if (activeKeys.length === 0) return;
 
         for (let i = 0; i < cellsToKill; i++) {
-            const key = activeKeys[Phaser.Math.Between(0, activeKeys.length - 1)];
+            const key = activeKeys[MathUtils.between(0, activeKeys.length - 1)];
             const [cx, cy] = key.split(',').map(Number);
-            const r = cy * CHUNK_SIZE + Phaser.Math.Between(0, CHUNK_SIZE - 1);
-            const c = cx * CHUNK_SIZE + Phaser.Math.Between(0, CHUNK_SIZE - 1);
+            const r = cy * CHUNK_SIZE + MathUtils.between(0, CHUNK_SIZE - 1);
+            const c = cx * CHUNK_SIZE + MathUtils.between(0, CHUNK_SIZE - 1);
 
             this.world.setCell(c * GRID_SIZE, r * GRID_SIZE, 0);
             this.world.evolvedCells.delete(`${r},${c}`);
@@ -206,10 +205,10 @@ export class CardSystem {
         if (activeKeys.length === 0) return;
 
         while (added < 5 && attempts < 100) {
-            const key = activeKeys[Phaser.Math.Between(0, activeKeys.length - 1)];
+            const key = activeKeys[MathUtils.between(0, activeKeys.length - 1)];
             const [cx, cy] = key.split(',').map(Number);
-            const r = cy * CHUNK_SIZE + Phaser.Math.Between(0, CHUNK_SIZE - 1);
-            const c = cx * CHUNK_SIZE + Phaser.Math.Between(0, CHUNK_SIZE - 1);
+            const r = cy * CHUNK_SIZE + MathUtils.between(0, CHUNK_SIZE - 1);
+            const c = cx * CHUNK_SIZE + MathUtils.between(0, CHUNK_SIZE - 1);
 
             if (this.world.getCell(c * GRID_SIZE, r * GRID_SIZE) > 0) {
                 this.world.evolvedCells.add(`${r},${c}`);
@@ -226,10 +225,10 @@ export class CardSystem {
         if (activeKeys.length === 0) return;
 
         while (done < 5 && attempts < 100) {
-            const key = activeKeys[Phaser.Math.Between(0, activeKeys.length - 1)];
+            const key = activeKeys[MathUtils.between(0, activeKeys.length - 1)];
             const [cx, cy] = key.split(',').map(Number);
-            const r = cy * CHUNK_SIZE + Phaser.Math.Between(0, CHUNK_SIZE - 1);
-            const c = cx * CHUNK_SIZE + Phaser.Math.Between(0, CHUNK_SIZE - 1);
+            const r = cy * CHUNK_SIZE + MathUtils.between(0, CHUNK_SIZE - 1);
+            const c = cx * CHUNK_SIZE + MathUtils.between(0, CHUNK_SIZE - 1);
 
             if (this.world.getCell(c * GRID_SIZE, r * GRID_SIZE) > 0) {
                 for (let dr = -1; dr <= 1; dr++) {
@@ -246,23 +245,18 @@ export class CardSystem {
     }
 
     private applyBarrier() {
-        const camera = this.scene.cameras.main;
-        const r = Math.floor((camera.scrollY + camera.height / 2) / GRID_SIZE);
-        const c = Math.floor((camera.scrollX + camera.width / 2) / GRID_SIZE);
-
+        const { row, col } = this.game.getCenterGridPosition();
         for (let i = -2; i <= 2; i++) {
             for (let j = -2; j <= 2; j++) {
-                const key = `${r + i},${c + j}`;
+                const key = `${row + i},${col + j}`;
                 this.world.barrierCells.set(key, 20);
             }
         }
     }
 
     private applyGliderGun() {
-        const camera = this.scene.cameras.main;
-        const centerRow = Math.floor((camera.scrollY + camera.height / 2) / GRID_SIZE);
-        const centerCol = Math.floor((camera.scrollX + camera.width / 2) / GRID_SIZE);
-
-        this.patternSystem.placePattern(GLIDER_GUN, centerRow, centerCol);
+        const { row, col } = this.game.getCenterGridPosition();
+        this.patternSystem.placePattern(GLIDER_GUN, row, col);
     }
 }
+
